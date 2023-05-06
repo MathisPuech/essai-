@@ -99,6 +99,7 @@ int main() {
         personnage[i].direction = 1;
         personnage[i].en_deplacement = 1;
         personnage[i].frame = 0;
+        personnage[i].nb_vie=5;
     }
     ///         variable
     int frame_counteur = 0;
@@ -106,6 +107,7 @@ int main() {
     int taille_w = 64;
     int ecart = 50;
     int choix_perso = 0;
+
     ///         SPRITE
     creation_sprite_perso(&personnage[0], sprite_octave, taille_w, taille_h);
     creation_sprite_perso(&personnage[1], sprite_marina, taille_w, taille_h);
