@@ -1,143 +1,130 @@
+#include <stdio.h>
 #include <allegro.h>
-
 typedef struct personnage
 {
-    BITMAP* bas[3];
-    BITMAP* gauche[3];
-    BITMAP* droite[3];
-    BITMAP* haut[3];
     int x, y;
-    int direction;
+    BITMAP* haut[9];
+    BITMAP* bas[9];
+    BITMAP* gauche[9];
+    BITMAP* droite[9];
+    int direction, en_deplacement;
     int frame;
-    int en_deplacement;
+    int nb_vie;
 }t_personnage;
-
-void separer_bitmap_personnage(t_personnage* personnage, BITMAP* bitmap)
+void initialisationAllegro()
 {
-    int taille_w = 48;
-    int taille_h = 48;
-
-    for (int j = 0; j < 3; j++) {
-        personnage->bas[j] = create_sub_bitmap(bitmap, j * taille_w, 0 * taille_h, taille_w, taille_h);
-        personnage->gauche[j] = create_sub_bitmap(bitmap, j * taille_w, 1 * taille_h, taille_w, taille_h);
-        personnage->droite[j] = create_sub_bitmap(bitmap, j * taille_w, 2 * taille_h, taille_w, taille_h);
-        personnage->haut[j] = create_sub_bitmap(bitmap, j * taille_w, 3 * taille_h, taille_w, taille_h);
+    allegro_init();
+    set_color_depth(desktop_color_depth());
+    if((set_gfx_mode(GFX_AUTODETECT_WINDOWED,900,650,0,0))!=0)
+    {     allegro_message("Pb de mode graphique") ;
+        allegro_exit();
+        exit(EXIT_FAILURE); }
+}
+int detection_changement(int choix)
+{
+    if (key[KEY_ENTER])
+    {
+        rest(500);
+        if (choix == 1) return 0;
+        else return choix+1;
+    }
+    return choix;
+}
+void creation_sprite_perso(t_personnage* personnage, BITMAP* bitmap, int taille_w, int taille_h)
+{
+    for (int i = 0; i < 9; ++i) {
+        personnage->haut[i] = create_sub_bitmap(bitmap, i * taille_w, 518, taille_w, taille_h);
+        personnage->bas[i] = create_sub_bitmap(bitmap, i * taille_w, 648, taille_w, taille_h);
+        personnage->gauche[i] = create_sub_bitmap(bitmap, i * taille_w, 584, taille_w, taille_h);
+        personnage->droite[i] = create_sub_bitmap(bitmap, i * taille_w, 711, taille_w, taille_h);
     }
 }
-
-void dessiner_personnage(t_personnage* personnage, BITMAP* buffer)
+void charger_vie(BITMAP* buffer,t_personnage* pers, BITMAP* coeur ){
+    for (int i = 0; i < pers->nb_vie; ++i) {
+        masked_blit(coeur, buffer, 0, 0, 0+i*coeur->w, 0, buffer->w, buffer->h);
+    }
+}
+void affichage_perso(t_personnage* personnage, BITMAP* buffer, int taille_w, int taille_h)
 {
-    BITMAP* frame;
-    switch (personnage->direction) {
+    BITMAP* PERSO;
+    switch (personnage->direction)
+    {
         case 0:
-            frame = personnage->bas[personnage->frame];
+            PERSO = personnage->haut[personnage->frame];
             break;
         case 1:
-            frame = personnage->gauche[personnage->frame];
+            PERSO = personnage->bas[personnage->frame];
             break;
         case 2:
-            frame = personnage->droite[personnage->frame];
+            PERSO = personnage->gauche[personnage->frame];
             break;
         case 3:
-            frame = personnage->haut[personnage->frame];
+            PERSO = personnage->droite[personnage->frame];
             break;
     }
-    masked_blit(frame, buffer, 0, 0, personnage->x, personnage->y, frame->w, frame->h);
+//    masked_blit(PERSO, buffer,0,0,personnage->x, personnage->y, PERSO->w, PERSO->h);
+    masked_stretch_blit(PERSO, buffer,0,0,taille_w,taille_h, personnage->x, personnage->y, SCREEN_W/2, SCREEN_H/2);
 }
-
-
 void maj_personnage(t_personnage* personnage)
 {
-    int vitesse = 1;
-    personnage->en_deplacement = 0;
-    if (key[KEY_UP]) {
-        personnage->y -= vitesse;
-        personnage->direction = 3;
-        personnage->en_deplacement = 1;
-    }
-    if (key[KEY_DOWN]) {
-        personnage->y += vitesse;
-        personnage->direction = 0;
-        personnage->en_deplacement = 1;
-    }
-    if (key[KEY_LEFT]) {
-        personnage->x -= vitesse;
-        personnage->direction = 1;
-        personnage->en_deplacement = 1;
-    }
-    if (key[KEY_RIGHT]) {
-        personnage->x += vitesse;
-        personnage->direction = 2;
-        personnage->en_deplacement = 1;
-    }
+    if(mouse_x >= (SCREEN_W/2)+160) personnage->direction = 3;
+    else personnage->direction = 2;
+    /*
+    if(key[KEY_UP]) personnage->direction = 0;
+    if(key[KEY_DOWN]) personnage->direction = 1;
+    if(key[KEY_LEFT]) personnage->direction = 2;
+    if(key[KEY_RIGHT]) personnage->direction = 3;
+    */
 }
-
 int main() {
-    allegro_init();
+    ///         les installations          ///
+    initialisationAllegro();
     install_keyboard();
-
-    set_color_depth(32);
-    set_gfx_mode(GFX_AUTODETECT_WINDOWED, 640, 480, 0, 0);
-
-    BITMAP *buffer = create_bitmap(SCREEN_W, SCREEN_H);
-
-    BITMAP *background = load_bitmap("../background_3.bmp", NULL);
-    if (!background) {
-        allegro_message("Erreur lors du chargement de 'background.bmp'\n");
-        return 1;
+    install_mouse();
+    ///         BITMAP
+    BITMAP* sprite_octave;
+    BITMAP* sprite_marina;
+    BITMAP* BG;
+    BITMAP* image_select_player;
+    BITMAP* buffer = create_bitmap(SCREEN_W, SCREEN_H);
+    sprite_octave = load_bitmap("../sprite_octave.bmp", NULL);
+    sprite_marina = load_bitmap("../sprite_marina.bmp", NULL);
+    BG = load_bitmap("../background_choix_du_joueur.bmp", NULL);
+    image_select_player = load_bitmap("../selection_joueur.bmp", NULL);
+    ///         struc
+    t_personnage personnage[4];
+    for (int i = 0; i < 4; ++i) {
+        personnage[i].x = (SCREEN_W / 2) - 50;
+        personnage[i].y = 175;
+        personnage[i].direction = 1;
+        personnage[i].en_deplacement = 1;
+        personnage[i].frame = 0;
     }
-
-    BITMAP *sprite = load_bitmap("../sprite.bmp", NULL);
-    if (!sprite) {
-        allegro_message("Erreur lors du chargement de 'sprite.bmp'\n");
-        destroy_bitmap(background);
-        destroy_bitmap(buffer);
-        return 1;
-    }
-
-    t_personnage personnage;
-    personnage.direction = 0;
-    personnage.frame = 0;
-    personnage.x = SCREEN_W/2;
-    personnage.y = SCREEN_H/2;
-
-    separer_bitmap_personnage(&personnage, sprite);
-
-    int frame_counter = 0;
-
-    while (!key[KEY_ESC]) {
-
-        maj_personnage(&personnage);
-
-        stretch_blit(background, buffer, 0, 0, background->w, background->h, 0, 0, buffer->w, buffer->h);
-
-        dessiner_personnage(&personnage, buffer);
-
-        blit(buffer, screen, 0, 0, 0, 0, buffer->w, buffer->h);
-
-        frame_counter++;
-        if (frame_counter >= 10) {
-            if (personnage.en_deplacement) {
-                personnage.frame = (personnage.frame + 1) % 3;
-            } else {
-                personnage.frame = 0;
-            }
-            frame_counter = 0;
+    ///         variable
+    int frame_counteur = 0;
+    int taille_h = 68;
+    int taille_w = 64;
+    int ecart = 50;
+    int choix_perso = 0;
+    ///         SPRITE
+    creation_sprite_perso(&personnage[0], sprite_octave, taille_w, taille_h);
+    creation_sprite_perso(&personnage[1], sprite_marina, taille_w, taille_h);
+    while (!key[KEY_ESC])
+    {
+        blit(BG, buffer,0,0,0,0,BG->w, BG->h);
+//        rectfill(buffer, ecart, ecart, SCREEN_W - ecart, SCREEN_H - ecart, makecol(155,41,3));
+        choix_perso = detection_changement(choix_perso);
+        masked_blit(image_select_player, buffer, 0,0, SCREEN_W/2, 100, image_select_player->w, image_select_player->h);
+        maj_personnage(&personnage[choix_perso]);
+        affichage_perso(&personnage[choix_perso],buffer, taille_w, taille_h);
+        if (frame_counteur>=10)
+        {
+            if(personnage[choix_perso].en_deplacement == 1) personnage[choix_perso].frame = ((personnage[choix_perso].frame + 1) %9);
+            else personnage[choix_perso].frame = 1;
+            frame_counteur = 0;
         }
 
-        rest(10);
-    }
 
-    for (int i = 0; i < 3; i++) {
-        destroy_bitmap(personnage.bas[i]);
-        destroy_bitmap(personnage.gauche[i]);
-        destroy_bitmap(personnage.droite[i]);
-        destroy_bitmap(personnage.haut[i]);
+        rest(1.0);
     }
-    destroy_bitmap(sprite);
-    destroy_bitmap(background);
-    destroy_bitmap(buffer);
-
-    return 0;
 }
-END_OF_MAIN();
